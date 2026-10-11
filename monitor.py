@@ -6,9 +6,19 @@ from email.mime.text import MIMEText
 
 GMAIL_ADDRESS = os.environ["GMAIL_ADDRESS"]
 GMAIL_PASSWORD = os.environ["GMAIL_PASSWORD"]
-TARGET_URL = "https://gozasoro.rsvsys.jp/reservations/calendar"
-TARGET_DATES = ["11/22", "11/23"]
 MIN_VACANCY = 3
+
+# 監視する日付と週のURLを指定
+TARGETS = [
+    {
+        "date": "11/22",
+        "url": "https://gozasoro.rsvsys.jp/reservations/calendar?date=2026/11/22",
+    },
+    {
+        "date": "11/23",
+        "url": "https://gozasoro.rsvsys.jp/reservations/calendar?date=2026/11/23",
+    },
+]
 
 def fetch(url):
     headers = {
@@ -23,7 +33,6 @@ def fetch(url):
 
 def extract_vacancy(html):
     matches = re.findall(r'残<i>(\d+)名様</i>', html)
-    print(f"取得した空き状況：{matches}")
     return matches
 
 def notify(subject, body):
@@ -36,28 +45,31 @@ def notify(subject, body):
         s.send_message(msg)
 
 def main():
-    try:
-        html = fetch(TARGET_URL)
-    except Exception as e:
-        print(f"取得エラー：{e}")
-        return
+    for target in TARGETS:
+        print(f"\n--- {target['date']} の確認 ---")
+        try:
+            html = fetch(target["url"])
+        except Exception as e:
+            print(f"取得エラー：{e}")
+            continue
 
-    vacancies = extract_vacancy(html)
+        vacancies = extract_vacancy(html)
+        print(f"取得した空き状況：{vacancies}")
 
-    if not vacancies:
-        print("空き情報が取得できませんでした")
-        return
+        if not vacancies:
+            print("空き情報が取得できませんでした")
+            continue
 
-    for v in vacancies:
-        if int(v) >= MIN_VACANCY:
-            print(f"{v}名様の空きを検知！メールを送信します。")
-            notify(
-                f"【速報】御座候ミュージアムに{v}名様の空きがあります！",
-                f"11/22または11/23に{v}名様の空きが出ました！今すぐ予約してください。\n\n{TARGET_URL}"
-            )
-            return
-
-    print(f"空きなし（現在の状況：{vacancies}）")
+        for v in vacancies:
+            if int(v) >= MIN_VACANCY:
+                print(f"{v}名様の空きを検知！メールを送信します。")
+                notify(
+                    f"【速報】御座候ミュージアム{target['date']}に{v}名様の空きがあります！",
+                    f"{target['date']}に{v}名様の空きが出ました！今すぐ予約してください。\n\nhttps://gozasoro.rsvsys.jp/reservations/calendar"
+                )
+                break
+        else:
+            print(f"空きなし（現在の状況：{vacancies}）")
 
 if __name__ == "__main__":
     main()
