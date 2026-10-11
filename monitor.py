@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 GMAIL_ADDRESS = os.environ["GMAIL_ADDRESS"]
 GMAIL_PASSWORD = os.environ["GMAIL_PASSWORD"]
 TARGET_URL = "https://gozasoro.rsvsys.jp/reservations/calendar"
-TARGET_DATE = "08/11"
+TARGET_DATES = ["11/22", "11/23"]
 MIN_VACANCY = 3
 
 def fetch(url):
@@ -22,7 +22,6 @@ def fetch(url):
     return response.text
 
 def extract_vacancy(html):
-    # 「残○名様」の数字をすべて取得
     matches = re.findall(r'残<i>(\d+)名様</i>', html)
     print(f"取得した空き状況：{matches}")
     return matches
@@ -49,13 +48,12 @@ def main():
         print("空き情報が取得できませんでした")
         return
 
-    # 3名様以上の空きがあるか確認
     for v in vacancies:
         if int(v) >= MIN_VACANCY:
             print(f"{v}名様の空きを検知！メールを送信します。")
             notify(
-                f"【速報】御座候ミュージアム8/11に{v}名様の空きがあります！",
-                f"8/11（火）に{v}名様の空きが出ました！今すぐ予約してください。\n\n{TARGET_URL}"
+                f"【速報】御座候ミュージアムに{v}名様の空きがあります！",
+                f"11/22または11/23に{v}名様の空きが出ました！今すぐ予約してください。\n\n{TARGET_URL}"
             )
             return
 
